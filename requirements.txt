@@ -9,10 +9,12 @@ cycler==0.10.0
 decorator==4.4.2
 defusedxml==0.7.0
 entrypoints==0.3
+Flask==1.1.2
 ipykernel==5.5.0
 ipython==7.21.0
 ipython-genutils==0.2.0
 ipywidgets==7.6.3
+itsdangerous==1.1.0
 jedi==0.18.0
 Jinja2==2.11.3
 joblib==1.0.1
@@ -68,4 +70,5 @@ tqdm==4.59.0
 traitlets==5.0.5
 wcwidth==0.2.5
 webencodings==0.5.1
+Werkzeug==1.0.1
 widgetsnbextension==3.5.1
