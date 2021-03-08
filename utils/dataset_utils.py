@@ -2,9 +2,13 @@ import glob
 import pandas as pd
 import string
 import nltk
+import psycopg2
+import psycopg2.extras
 from nltk.corpus import stopwords, wordnet
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
+
+from utils import db
 
 
 def get_wordnet_pos(word):
@@ -41,12 +45,32 @@ def clean_text(text):
     return ' '.join(clean_words)
 
 
-def build_df():
-    return pd.read_csv('./raw_dataset/training_set.csv')
+def convote_database_to_df():
+    table_name = 'convote_dataset'
+
+    conn = db.make_conn()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cursor.execute(f'''
+        SELECT
+            text,
+            party,
+            party_num_label
+        FROM {table_name}
+    ''')
+
+    rows = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    df = pd.DataFrame(rows, columns=['text', 'party', 'party_num_label'])
+
+    return df
 
 
-def dataset_to_csv():
-    training_set_dir = './raw_dataset/training_set'
+def convote_dataset_to_db():
+    table_name = 'convote_dataset'
+    training_set_dir = '../raw_dataset/training_set'
     training_set_file_names = [file for file in glob.glob(f'{training_set_dir}/*.txt')]
 
     raw_data = []
@@ -73,9 +97,25 @@ def dataset_to_csv():
     print(f'Cleaning {df.shape[0]} rows of text')
     df['text'] = df['text'].apply(clean_text)
 
-    df.to_csv('./raw_dataset/training_set.csv', index=False)
+    conn = db.make_conn()
+
+    rows = [tuple(x) for x in df.to_numpy()]
+    column_names = ','.join(list(df.columns))
+
+    query = f'INSERT INTO {table_name} ({column_names}) VALUES(%s,%s,%s)'
+    cursor = conn.cursor()
+    try:
+        psycopg2.extras.execute_batch(cursor, query, rows)
+        conn.commit()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(f'Error: {error}')
+        conn.rollback()
+        cursor.close()
+        return
+
+    print("execute_batch() done")
+    cursor.close()
 
 
 if __name__ == '__main__':
-    print('Building csv...')
-    dataset_to_csv()
+    convote_dataset_to_db()
